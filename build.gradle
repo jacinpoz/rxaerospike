@@ -1,0 +1,30 @@
+group = 'com.github.ganet'
+version = '0.1.0'
+description = "RxJava2 wrapper for aerospike-client-java"
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "com.aerospike:aerospike-client:$aerospike_client_version"
+    compile "io.reactivex.rxjava2:rxjava:$rxjava2_version"
+    testCompile "junit:junit:$junit_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+}
