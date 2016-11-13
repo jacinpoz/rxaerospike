@@ -10,11 +10,19 @@ RxAerospike is a wrapper for [aerospike-client-java](https://github.com/aerospik
 
 * Kotlin makes it very easy to implement [class delegation](https://kotlinlang.org/docs/reference/delegation.html) by eliminating all the boilerplate code.
 * Also Kotlin supports default parameters, which generate different methods auto-magically in Java by using the annotation [@JvmOverloads](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.jvm/-jvm-overloads/), reducing boilerplate code even more.
+
+#### Maven central
+
+		<dependency>
+			<groupId>com.github.ganet</groupId>
+			<artifactId>rxaerospike</artifactId>
+			<version>0.1.0</version>
+		</dependency>
+
 #### FAQ
 **Why not implement the wrapper using Kotlin extension functions?**
 In a Kotlin world, that would be the way to go and the ideal implementation. However, this wrapper is intended to be compatible with Java applications as well, so class delegation is a better option.
 
 #### Contact and contributions
-
 I will setup a contribution model soon, please use this mailing list for any questions for now: https://groups.google.com/forum/#!forum/rxaerospike
 
