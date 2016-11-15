@@ -1,5 +1,5 @@
 group = 'com.github.ganet'
-version = '0.1.0'
+version = '0.1.1-SNAPSHOT'
 description = "RxJava2 wrapper for aerospike-client-java"
 
 buildscript {
@@ -47,53 +47,57 @@ artifacts {
     archives javadocJar, sourcesJar
 }
 
-signing {
-    sign configurations.archives
-}
-
 uploadArchives {
-    repositories {
-        mavenDeployer {
-            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+    doLast {
+        signing {
+            sign configurations.archives
+        }
 
-            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                authentication(userName: ossrhUsername, password: ossrhPassword)
-            }
+        repositories {
+            mavenDeployer {
+                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
-            snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                authentication(userName: ossrhUsername, password: ossrhPassword)
-            }
+                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                    authentication(userName: ossrhUsername, password: ossrhPassword)
 
-            pom.project {
-                name = 'RxAerospike'
-                packaging = 'jar'
-                description = 'RxJava2 wrapper for aerospike-client-java'
-                url = 'https://github.com/Ganet/rxaerospike'
-
-                scm {
-                    connection = 'scm:git:git://github.com/Ganet/rxaerospike.git'
-                    developerConnection = 'scm:git:ssh://github.com/Ganet/rxaerospike.git'
-                    url = 'https://github.com/Ganet/rxaerospike/tree/master'
                 }
 
-                licenses {
-                    license {
-                        name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                }
+
+                pom.project {
+                    name = 'RxAerospike'
+                    packaging = 'jar'
+                    description = 'RxJava2 wrapper for aerospike-client-java'
+                    url = 'https://github.com/Ganet/rxaerospike'
+
+                    scm {
+                        connection = 'scm:git:git://github.com/Ganet/rxaerospike.git'
+                        developerConnection = 'scm:git:ssh://github.com/Ganet/rxaerospike.git'
+                        url = 'https://github.com/Ganet/rxaerospike/tree/master'
                     }
-                }
 
-                developers {
-                    developer {
-                        id = 'Ganet'
-                        name = 'Jose Ignacio Acin Pozo'
-                        email = 'joseignacio.acinpozo@gmail.com'
-                        organization = 'Github'
-                        organizationUrl = 'https://github.com/Ganet'
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id = 'Ganet'
+                            name = 'Jose Ignacio Acin Pozo'
+                            email = 'joseignacio.acinpozo@gmail.com'
+                            organization = 'Github'
+                            organizationUrl = 'https://github.com/Ganet'
+                        }
                     }
                 }
             }
         }
     }
+
 }
 
