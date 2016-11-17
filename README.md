@@ -2,6 +2,8 @@
 [![Build Status](https://travis-ci.org/Ganet/rxaerospike.svg?branch=develop)](https://travis-ci.org/Ganet/rxaerospike)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.ganet/rxaerospike/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.ganet/rxaerospike)
 [![GitHub license](https://img.shields.io/github/license/kotlintest/kotlintest.svg)]()
+[![codecov](https://codecov.io/gh/Ganet/aerospike-client-java/branch/master/graph/badge.svg)](https://codecov.io/gh/Ganet/aerospike-client-java)
+
 
 RxAerospike is a wrapper for [aerospike-client-java](https://github.com/aerospike/aerospike-client-java) which re-implements the database operations using RxJava2 and Kotlin.
 
