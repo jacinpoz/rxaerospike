@@ -30,6 +30,14 @@ jacoco {
     toolVersion = "0.7.6.201602180812"
 }
 
+jacocoTestReport {
+    reports {
+        xml.enabled false
+        csv.enabled false
+        html.destination "${buildDir}/jacocoHtml"
+    }
+}
+
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "com.aerospike:aerospike-client:$aerospike_client_version"
