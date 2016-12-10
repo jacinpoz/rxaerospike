@@ -353,7 +353,7 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
     }
 
     @JvmOverloads
-    fun rxAsyncGetHeader(policy: BatchPolicy?, keys: Array<Key>, backPressure: BackpressureStrategy = MISSING): Flowable<Pair<Key, Record?>> {
+    fun rxAsyncGetHeaderSequence(policy: BatchPolicy?, keys: Array<Key>, backPressure: BackpressureStrategy = MISSING): Flowable<Pair<Key, Record?>> {
         return Flowable.create({
             client.getHeader(policy, object : RecordSequenceListener {
                 override fun onRecord(key: Key, record: Record?) {

@@ -3,11 +3,15 @@ import com.aerospike.client.AerospikeException
 import com.aerospike.client.BatchRead
 import com.aerospike.client.Bin
 import com.aerospike.client.Key
+import com.aerospike.client.Language
+import com.aerospike.client.Operation
 import com.aerospike.client.Record
+import com.aerospike.client.Value
 import com.aerospike.client.async.AsyncClient
 import com.aerospike.client.listener.BatchListListener
 import com.aerospike.client.listener.BatchSequenceListener
 import com.aerospike.client.listener.DeleteListener
+import com.aerospike.client.listener.ExecuteListener
 import com.aerospike.client.listener.ExistsArrayListener
 import com.aerospike.client.listener.ExistsListener
 import com.aerospike.client.listener.ExistsSequenceListener
@@ -16,12 +20,23 @@ import com.aerospike.client.listener.RecordListener
 import com.aerospike.client.listener.RecordSequenceListener
 import com.aerospike.client.listener.WriteListener
 import com.aerospike.client.policy.BatchPolicy
+import com.aerospike.client.policy.QueryPolicy
+import com.aerospike.client.policy.ScanPolicy
 import com.aerospike.client.policy.WritePolicy
+import com.aerospike.client.query.IndexCollectionType
+import com.aerospike.client.query.IndexType
+import com.aerospike.client.query.Statement
+import com.aerospike.client.task.ExecuteTask
+import com.aerospike.client.task.IndexTask
+import com.aerospike.client.task.RegisterTask
 import com.github.ganet.rx.aerospike.AerospikeRxClient
 import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.eq
+import org.mockito.Mockito.`when`
+import org.mockito.Mockito.doNothing
+import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 
@@ -32,8 +47,21 @@ import org.mockito.Mockito.verify
 class AerospikeRxClientTest {
     val policy = WritePolicy()
     val batchPolicy = BatchPolicy()
-    val key = Key("test", "test", "test")
-    val keyArray = arrayOf(Key("test", "test", "test"))
+    val scanPolicy = ScanPolicy()
+    val queryPolicy = QueryPolicy()
+    val namespace = "testNamespace"
+    val setName = "testSet"
+    val indexName = "testIndexName"
+    val indexType = IndexType.STRING
+    val indexCollectionType = IndexCollectionType.LIST
+    val clientPath = "clientPath"
+    val serverPath = "serverPath"
+    val language = Language.LUA
+    val classLoader = ClassLoader.getSystemClassLoader()
+    val packageName = "testPackage"
+    val functionName = "testFunction"
+    val key = Key(namespace, setName, "test")
+    val keyArray = arrayOf(key)
     val booleanArray = booleanArrayOf(true)
     val binName = "TestBin"
     val bin = Bin(binName, 2.0)
@@ -41,6 +69,17 @@ class AerospikeRxClientTest {
     val record = Record(emptyMap(), 1, 1)
     val recordArray : Array<Record?> = arrayOf(record)
     val exception = AerospikeException()
+    val statement = Statement()
+
+    val value = Value.getAsNull()
+    val registerTask = mock(RegisterTask::class.java)
+    val executeTask = mock(ExecuteTask::class.java)
+    val indexTask = mock(IndexTask::class.java)
+
+    val operations = arrayOf(Operation(Operation.Type.ADD, binName, Value.get(2.0)),
+            Operation(Operation.Type.APPEND, "Hello", Value.get("World")),
+            Operation(Operation.Type.READ, "World", Value.getAsNull()))
+
 
     var writeListenerCaptor = ArgumentCaptor.forClass(WriteListener::class.java)
     var deleteListenerCaptor = ArgumentCaptor.forClass(DeleteListener::class.java)
@@ -48,6 +87,8 @@ class AerospikeRxClientTest {
     var existsListenerCaptor = ArgumentCaptor.forClass(ExistsListener::class.java)
     var existsArrayListenerCaptor = ArgumentCaptor.forClass(ExistsArrayListener::class.java)
     var existsSequenceListenerCaptor = ArgumentCaptor.forClass(ExistsSequenceListener::class.java)
+
+    var executeListenerCaptor = ArgumentCaptor.forClass(ExecuteListener::class.java)
 
     var batchListListener =  ArgumentCaptor.forClass(BatchListListener::class.java)
     var batchSequenceListener =  ArgumentCaptor.forClass(BatchSequenceListener::class.java)
@@ -322,24 +363,300 @@ class AerospikeRxClientTest {
 
     @Test
     fun testRxAsyncGetSequenceArrayKeySuccess() {
-        val flowableGetSequenceArraykey = rxClient.rxAsyncGetSequence(batchPolicy, keyArray).test()
+        val flowableGetSequenceArrayKey = rxClient.rxAsyncGetSequence(batchPolicy, keyArray).test()
         verify(mockClient).get(eq(batchPolicy), recordSequenceListener.capture(), eq(keyArray))
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onSuccess()
-        flowableGetSequenceArraykey.assertResult(key to record, key to record, key to record)
+        flowableGetSequenceArrayKey.assertResult(key to record, key to record, key to record)
     }
 
     @Test
     fun testRxAsyncGetSequenceArrayKeyFailure() {
-        val flowableGetSequenceArraykey = rxClient.rxAsyncGetSequence(batchPolicy, keyArray).test()
+        val flowableGetSequenceArrayKey = rxClient.rxAsyncGetSequence(batchPolicy, keyArray).test()
         verify(mockClient).get(eq(batchPolicy), recordSequenceListener.capture(), eq(keyArray))
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onFailure(exception)
-        flowableGetSequenceArraykey.assertValues(key to record, key to record, key to record)
-        flowableGetSequenceArraykey.assertError(exception)
+        flowableGetSequenceArrayKey.assertValues(key to record, key to record, key to record)
+        flowableGetSequenceArrayKey.assertError(exception)
+    }
+
+    @Test
+    fun testRxAsyncGetArrayBinSingleSuccess() {
+        val singleGetArrayBin = rxClient.rxAsyncGet(batchPolicy, keyArray, binName).test()
+        verify(mockClient).get(eq(batchPolicy), recordArrayListener.capture(), eq(keyArray), eq(binName))
+        recordArrayListener.value.onSuccess(keyArray, recordArray)
+        singleGetArrayBin.assertResult(keyArray to recordArray)
+    }
+
+    @Test
+    fun testRxAsyncGetArrayBinSingleFailure() {
+        val singleGetArrayBin = rxClient.rxAsyncGet(batchPolicy, keyArray, binName).test()
+        verify(mockClient).get(eq(batchPolicy), recordArrayListener.capture(), eq(keyArray), eq(binName))
+        recordArrayListener.value.onFailure(exception)
+        singleGetArrayBin.assertError(exception)
+    }
+
+    @Test
+    fun testRxAsyncGetSequenceArrayKeyBinSuccess() {
+        val flowableGetSequenceArrayKeyBin = rxClient.rxAsyncGetSequence(batchPolicy, keyArray, binName).test()
+        verify(mockClient).get(eq(batchPolicy), recordSequenceListener.capture(), eq(keyArray), eq(binName))
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onSuccess()
+        flowableGetSequenceArrayKeyBin.assertResult(key to record, key to record, key to record)
+    }
+
+    @Test
+    fun testRxAsyncGetSequenceArrayKeyBinFailure() {
+        val flowableGetSequenceArrayKeyBin = rxClient.rxAsyncGetSequence(batchPolicy, keyArray, binName).test()
+        verify(mockClient).get(eq(batchPolicy), recordSequenceListener.capture(), eq(keyArray), eq(binName))
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onFailure(exception)
+        flowableGetSequenceArrayKeyBin.assertValues(key to record, key to record, key to record)
+        flowableGetSequenceArrayKeyBin.assertError(exception)
+    }
+
+    @Test
+    fun testRxAsyncGetHeaderArraySuccess() {
+        val singleGetHeaderArray = rxClient.rxAsyncGetHeader(batchPolicy, keyArray).test()
+        verify(mockClient).getHeader(eq(batchPolicy), recordArrayListener.capture(), eq(keyArray))
+        recordArrayListener.value.onSuccess(keyArray, recordArray)
+        singleGetHeaderArray.assertResult(keyArray to recordArray)
+    }
+
+    @Test
+    fun testRxAsyncGetHeaderArrayFailure() {
+        val singleGetHeaderArray = rxClient.rxAsyncGetHeader(batchPolicy, keyArray).test()
+        verify(mockClient).getHeader(eq(batchPolicy), recordArrayListener.capture(), eq(keyArray))
+        recordArrayListener.value.onFailure(exception)
+        singleGetHeaderArray.assertError(exception)
+    }
+
+    @Test
+    fun testRxAsyncGetHeaderSequenceArrayKeySuccess() {
+        val flowableGetHeaderSequenceArrayKey = rxClient.rxAsyncGetHeaderSequence(batchPolicy, keyArray).test()
+        verify(mockClient).getHeader(eq(batchPolicy), recordSequenceListener.capture(), eq(keyArray))
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onSuccess()
+        flowableGetHeaderSequenceArrayKey.assertResult(key to record, key to record, key to record)
+    }
+
+    @Test
+    fun testRxAsyncGetHeaderSequenceArrayKeyFailure() {
+        val flowableGetHeaderSequenceArrayKey = rxClient.rxAsyncGetHeaderSequence(batchPolicy, keyArray).test()
+        verify(mockClient).getHeader(eq(batchPolicy), recordSequenceListener.capture(), eq(keyArray))
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onFailure(exception)
+        flowableGetHeaderSequenceArrayKey.assertValues(key to record, key to record, key to record)
+        flowableGetHeaderSequenceArrayKey.assertError(exception)
+    }
+
+    @Test
+    fun testRxAsyncOperateSuccess() {
+        val singleOperate = rxClient.rxAsyncOperate(policy, key, operations[0]).test()
+        verify(mockClient).operate(eq(policy), recordListener.capture(), eq(key), eq(operations[0]))
+        recordListener.value.onSuccess(key, record)
+        singleOperate.assertResult(key to record)
+    }
+
+    @Test
+    fun testRxAsyncOperateFailure() {
+        val singleOperate = rxClient.rxAsyncOperate(policy, key, operations[0]).test()
+        verify(mockClient).operate(eq(policy), recordListener.capture(), eq(key), eq(operations[0]))
+        recordListener.value.onFailure(exception)
+        singleOperate.assertError(exception)
+    }
+
+    @Test
+    fun testRxAsyncScanAllSuccess() {
+        val flowableScanAll = rxClient.rxAsyncScanAll(scanPolicy, namespace, setName, binName).test()
+        verify(mockClient).scanAll(eq(scanPolicy), recordSequenceListener.capture(), eq(namespace), eq(setName), eq(binName))
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onSuccess()
+        flowableScanAll.assertResult(key to record, key to record, key to record)
+    }
+
+    @Test
+    fun testRxAsyncScanAllFailure() {
+        val flowableScanAll = rxClient.rxAsyncScanAll(scanPolicy, namespace, setName, binName).test()
+        verify(mockClient).scanAll(eq(scanPolicy), recordSequenceListener.capture(), eq(namespace), eq(setName), eq(binName))
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onFailure(exception)
+        flowableScanAll.assertValues(key to record, key to record, key to record)
+        flowableScanAll.assertError(exception)
+    }
+
+    @Test
+    fun testRxAsyncExecuteSuccess() {
+        val singleExecute = rxClient.rxAsyncExecute(policy, key, packageName, functionName, value).test()
+        verify(mockClient).execute(eq(policy), executeListenerCaptor.capture(), eq(key), eq(packageName), eq(functionName), eq(value))
+        executeListenerCaptor.value.onSuccess(key, value)
+        singleExecute.assertResult(key to value)
+    }
+
+    @Test
+    fun testRxAsyncExecuteFailure() {
+        val singleExecute = rxClient.rxAsyncExecute(policy, key, packageName, functionName, value).test()
+        verify(mockClient).execute(eq(policy), executeListenerCaptor.capture(), eq(key), eq(packageName), eq(functionName), eq(value))
+        executeListenerCaptor.value.onFailure(exception)
+        singleExecute.assertError(exception)
+    }
+
+    @Test
+    fun testRxAsyncQuerySuccess() {
+        val flowableQuery = rxClient.rxAsyncQuery(queryPolicy, statement).test()
+        verify(mockClient).query(eq(queryPolicy), recordSequenceListener.capture(), eq(statement))
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onSuccess()
+        flowableQuery.assertResult(key to record, key to record, key to record)
+    }
+
+    @Test
+    fun testRxAsyncQueryFailure() {
+        val flowableQuery = rxClient.rxAsyncQuery(queryPolicy, statement).test()
+        verify(mockClient).query(eq(queryPolicy), recordSequenceListener.capture(), eq(statement))
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onRecord(key, record)
+        recordSequenceListener.value.onFailure(exception)
+        flowableQuery.assertValues(key to record, key to record, key to record)
+        flowableQuery.assertError(exception)
+    }
+
+    @Test
+    fun testRxRegisterNoClassLoaderSuccess() {
+        doNothing().`when`(registerTask).waitTillComplete(1000)
+        `when`(mockClient.register(eq(policy), eq(clientPath), eq(serverPath), eq(language)))
+                .thenReturn(registerTask)
+        val registerCompletable = rxClient.rxRegister(policy, clientPath, serverPath, language).test()
+        verify(mockClient).register(eq(policy), eq(clientPath), eq(serverPath), eq(language))
+        registerCompletable.assertComplete()
+    }
+
+    @Test
+    fun testRxRegisterNoClassLoaderFailure() {
+        doThrow(exception).`when`(registerTask).waitTillComplete(1000)
+        `when`(mockClient.register(eq(policy), eq(clientPath), eq(serverPath), eq(language)))
+                .thenReturn(registerTask)
+        val registerCompletable = rxClient.rxRegister(policy, clientPath, serverPath, language).test()
+        verify(mockClient).register(eq(policy), eq(clientPath), eq(serverPath), eq(language))
+        registerCompletable.assertError(exception)
+    }
+
+    @Test
+    fun testRxRegisterClassLoaderSuccess() {
+        doNothing().`when`(registerTask).waitTillComplete(1000)
+        `when`(mockClient.register(eq(policy), eq(classLoader), eq(clientPath), eq(serverPath), eq(language)))
+                .thenReturn(registerTask)
+        val registerCompletable = rxClient.rxRegister(policy, classLoader, clientPath, serverPath, language).test()
+        verify(mockClient).register(eq(policy), eq(classLoader), eq(clientPath), eq(serverPath), eq(language))
+        registerCompletable.assertComplete()
+    }
+
+    @Test
+    fun testRxRegisterClassLoaderFailure() {
+        doThrow(exception).`when`(registerTask).waitTillComplete(1000)
+        `when`(mockClient.register(eq(policy), eq(classLoader), eq(clientPath), eq(serverPath), eq(language)))
+                .thenReturn(registerTask)
+        val registerCompletable = rxClient.rxRegister(policy, classLoader, clientPath, serverPath, language).test()
+        verify(mockClient).register(eq(policy), eq(classLoader), eq(clientPath), eq(serverPath), eq(language))
+        registerCompletable.assertError(exception)
+    }
+
+    @Test
+    fun testRxRegisterUdfSuccess() {
+        doNothing().`when`(registerTask).waitTillComplete(1000)
+        `when`(mockClient.registerUdfString(eq(policy), eq(binName), eq(serverPath), eq(language)))
+                .thenReturn(registerTask)
+        val registerCompletable = rxClient.rxRegisterUdfString(policy, binName, serverPath, language).test()
+        verify(mockClient).registerUdfString(eq(policy), eq(binName), eq(serverPath), eq(language))
+        registerCompletable.assertComplete()
+    }
+
+    @Test
+    fun testRxRegisterUdfFailure() {
+        doThrow(exception).`when`(registerTask).waitTillComplete(1000)
+        `when`(mockClient.registerUdfString(eq(policy), eq(binName), eq(serverPath), eq(language)))
+                .thenReturn(registerTask)
+        val registerCompletable = rxClient.rxRegisterUdfString(policy, binName, serverPath, language).test()
+        verify(mockClient).registerUdfString(eq(policy), eq(binName), eq(serverPath), eq(language))
+        registerCompletable.assertError(exception)
+    }
+
+    @Test
+    fun testRxExecuteSuccess() {
+        doNothing().`when`(executeTask).waitTillComplete(1000)
+        `when`(mockClient.execute(eq(policy), eq(statement), eq(packageName), eq(functionName), eq(value)))
+                .thenReturn(executeTask)
+        val executeCompletable = rxClient.rxExecute(policy, statement, packageName, functionName, 1000, value).test()
+        verify(mockClient).execute(eq(policy), eq(statement), eq(packageName), eq(functionName), eq(value))
+        executeCompletable.assertComplete()
+    }
+
+    @Test
+    fun testRxExecuteFailure() {
+        doThrow(exception).`when`(executeTask).waitTillComplete(1000)
+        `when`(mockClient.execute(eq(policy), eq(statement), eq(packageName), eq(functionName), eq(value)))
+                .thenReturn(executeTask)
+        val executeCompletable = rxClient.rxExecute(policy, statement, packageName, functionName, 1000, value).test()
+        verify(mockClient).execute(eq(policy), eq(statement), eq(packageName), eq(functionName), eq(value))
+        executeCompletable.assertError(exception)
+    }
+
+    @Test
+    fun testRxCreateIndexSuccess() {
+        doNothing().`when`(indexTask).waitTillComplete(1000)
+        `when`(mockClient.createIndex(eq(policy), eq(namespace), eq(setName), eq(indexName), eq(binName), eq(indexType)))
+                .thenReturn(indexTask)
+        val createIndexCompletable = rxClient.rxCreateIndex(policy, namespace, setName, indexName, binName, indexType).test()
+        verify(mockClient).createIndex(eq(policy), eq(namespace), eq(setName), eq(indexName), eq(binName), eq(indexType))
+        createIndexCompletable.assertComplete()
+    }
+
+    @Test
+    fun testRxCreateIndexFailure() {
+        doThrow(exception).`when`(indexTask).waitTillComplete(1000)
+        `when`(mockClient.createIndex(eq(policy), eq(namespace), eq(setName), eq(indexName), eq(binName), eq(indexType)))
+                .thenReturn(indexTask)
+        val createIndexCompletable = rxClient.rxCreateIndex(policy, namespace, setName, indexName, binName, indexType).test()
+        verify(mockClient).createIndex(eq(policy), eq(namespace), eq(setName), eq(indexName), eq(binName), eq(indexType))
+        createIndexCompletable.assertError(exception)
+    }
+
+    @Test
+    fun testRxCreateIndexWithCollectionTypeSuccess() {
+        doNothing().`when`(indexTask).waitTillComplete(1000)
+        `when`(mockClient.createIndex(eq(policy), eq(namespace), eq(setName), eq(indexName), eq(binName), eq(indexType), eq(indexCollectionType)))
+                .thenReturn(indexTask)
+        val createIndexCompletable = rxClient.rxCreateIndex(policy, namespace, setName, indexName, binName, indexType, indexCollectionType).test()
+        verify(mockClient).createIndex(eq(policy), eq(namespace), eq(setName), eq(indexName), eq(binName), eq(indexType), eq(indexCollectionType))
+        createIndexCompletable.assertComplete()
+    }
+
+    @Test
+    fun testRxCreateIndexWithCollectionTypeFailure() {
+        doThrow(exception).`when`(indexTask).waitTillComplete(1000)
+        `when`(mockClient.createIndex(eq(policy), eq(namespace), eq(setName), eq(indexName), eq(binName), eq(indexType), eq(indexCollectionType)))
+                .thenReturn(indexTask)
+        val createIndexCompletable = rxClient.rxCreateIndex(policy, namespace, setName, indexName, binName, indexType, indexCollectionType).test()
+        verify(mockClient).createIndex(eq(policy), eq(namespace), eq(setName), eq(indexName), eq(binName), eq(indexType), eq(indexCollectionType))
+        createIndexCompletable.assertError(exception)
     }
 }
