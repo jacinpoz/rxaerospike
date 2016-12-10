@@ -2,10 +2,8 @@
 [![Build Status](https://travis-ci.org/Ganet/rxaerospike.svg?branch=develop)](https://travis-ci.org/Ganet/rxaerospike)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.ganet/rxaerospike/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.ganet/rxaerospike)
 [![GitHub license](https://img.shields.io/github/license/kotlintest/kotlintest.svg)]()
-[![codecov](https://codecov.io/gh/Ganet/aerospike-client-java/branch/master/graph/badge.svg)](https://codecov.io/gh/Ganet/aerospike-client-java)
 
-
-RxAerospike is a wrapper for [aerospike-client-java](https://github.com/aerospike/aerospike-client-java) which re-implements the database operations using RxJava2 and Kotlin.
+RxAerospike is a wrapper for [aerospike-client-java](https://github.com/aerospike/aerospike-client-java) which re-implements the database operations using RxJava2 and Kotlin. This wrapper also has 100% code coverage.
 
 #### Current features
 
@@ -28,7 +26,13 @@ RxAerospike is a wrapper for [aerospike-client-java](https://github.com/aerospik
 
 #### FAQ
 **Why not implement the wrapper using Kotlin extension functions?**
+
 In a Kotlin world, that would be the way to go and the ideal implementation. However, this wrapper is intended to be compatible with Java applications as well, so class delegation is a better option.
+
+**Why don't you have a code coverage badge to prove the 100% coverage claim?**
+
+I attached an IntelliJ coverage report to the project, as other coverage tools like JaCoCo would not report the correct percentage (i.e. they base their results on .class bytecode rather than real source code and in this case AerospikeRxClient extends AsyncClient but its not responsible at all for testing its implementation).
+Feel free to download the project and run the tests with IntelliJ code coverage enabled.
 
 #### Contact and contributions
 I will setup a contribution model soon, please use this mailing list for any questions for now: https://groups.google.com/forum/#!forum/rxaerospike
