@@ -21,7 +21,7 @@ RxAerospike is a wrapper for [aerospike-client-java](https://github.com/aerospik
 		<dependency>
 			<groupId>com.github.ganet</groupId>
 			<artifactId>rxaerospike</artifactId>
-			<version>0.2.0</version>
+			<version>0.3.0</version>
 		</dependency>
 
 #### FAQ
