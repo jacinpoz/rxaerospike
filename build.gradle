@@ -1,5 +1,5 @@
 group = 'com.github.ganet'
-version = '0.2.1-SNAPSHOT'
+version = '0.3.0'
 description = "RxJava2 wrapper for aerospike-client-java"
 
 buildscript {
