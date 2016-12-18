@@ -46,6 +46,8 @@ import com.aerospike.client.policy.WritePolicy
 import com.aerospike.client.query.IndexCollectionType
 import com.aerospike.client.query.IndexType
 import com.aerospike.client.query.Statement
+import com.github.ganet.rx.aerospike.data.AerospikeArrayResult
+import com.github.ganet.rx.aerospike.data.AerospikeResult
 import io.reactivex.BackpressureStrategy
 import io.reactivex.BackpressureStrategy.MISSING
 import io.reactivex.Completable
@@ -118,12 +120,12 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
         }
     }
 
-    fun rxAsyncDelete(policy: WritePolicy?, key: Key): Single<Pair<Key, Boolean>> {
+    fun rxAsyncDelete(policy: WritePolicy?, key: Key): Single<AerospikeResult<Boolean>> {
         return Single.create {
             client.delete(policy, object : DeleteListener {
                 override fun onSuccess(key: Key, success: Boolean) {
                     // Nice wordplay :)
-                    it.onSuccess(key to success)
+                    it.onSuccess(AerospikeResult(key, success))
                 }
 
                 override fun onFailure(exception: AerospikeException?) {
@@ -148,12 +150,12 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
         }
     }
 
-    fun rxAsyncExists(policy: Policy?, key: Key): Single<Pair<Key, Boolean>> {
+    fun rxAsyncExists(policy: Policy?, key: Key): Single<AerospikeResult<Boolean>> {
         return Single.create {
             client.exists(policy, object : ExistsListener {
                 override fun onSuccess(key: Key, success: Boolean) {
                     // Nice wordplay :)!
-                    it.onSuccess(key to success)
+                    it.onSuccess(AerospikeResult(key, success))
                 }
 
                 override fun onFailure(exception: AerospikeException?) {
@@ -163,11 +165,11 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
         }
     }
 
-    fun rxAsyncExists(policy: BatchPolicy?, keys: Array<Key>): Single<Pair<Array<Key>, BooleanArray>> {
+    fun rxAsyncExists(policy: BatchPolicy?, keys: Array<Key>): Single<AerospikeArrayResult<BooleanArray>> {
         return Single.create {
             client.exists(policy, object : ExistsArrayListener {
                 override fun onSuccess(keyArray: Array<Key>, booleanArray: BooleanArray) {
-                    it.onSuccess(keyArray to booleanArray)
+                    it.onSuccess(AerospikeArrayResult(keyArray, booleanArray))
                 }
 
                 override fun onFailure(exception: AerospikeException?) {
@@ -178,7 +180,7 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
     }
 
     @JvmOverloads
-    fun rxAsyncExistsSequence(policy: BatchPolicy?, keys: Array<Key>, backPressure: BackpressureStrategy = MISSING): Flowable<Pair<Key, Boolean>> {
+    fun rxAsyncExistsSequence(policy: BatchPolicy?, keys: Array<Key>, backPressure: BackpressureStrategy = MISSING): Flowable<AerospikeResult<Boolean>> {
         return Flowable.create({
             client.exists(policy, object : ExistsSequenceListener {
                 override fun onSuccess() {
@@ -186,7 +188,7 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
                 }
 
                 override fun onExists(key: Key, exist: Boolean) {
-                    it.onNext(key to exist)
+                    it.onNext(AerospikeResult(key, exist))
                 }
 
                 override fun onFailure(exception: AerospikeException?) {
@@ -196,11 +198,11 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
         }, backPressure)
     }
 
-    fun rxAsyncGet(policy: Policy?, key: Key): Single<Pair<Key, Record?>> {
+    fun rxAsyncGet(policy: Policy?, key: Key): Single<AerospikeResult<Record?>> {
         return Single.create {
             client.get(policy, object : RecordListener {
                 override fun onSuccess(key: Key, record: Record?) {
-                    it.onSuccess(key to record)
+                    it.onSuccess(AerospikeResult(key, record))
                 }
 
                 override fun onFailure(exception: AerospikeException?) {
@@ -210,11 +212,11 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
         }
     }
 
-    fun rxAsyncGet(policy: Policy?, key: Key, vararg binNames: String): Single<Pair<Key, Record?>> {
+    fun rxAsyncGet(policy: Policy?, key: Key, vararg binNames: String): Single<AerospikeResult<Record?>> {
         return Single.create {
             client.get(policy, object : RecordListener {
                 override fun onSuccess(key: Key, record: Record?) {
-                    it.onSuccess(key to record)
+                    it.onSuccess(AerospikeResult(key, record))
                 }
 
                 override fun onFailure(exception: AerospikeException?) {
@@ -224,11 +226,11 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
         }
     }
 
-    fun rxAsyncGetHeader(policy: Policy?, key: Key): Single<Pair<Key, Record?>> {
+    fun rxAsyncGetHeader(policy: Policy?, key: Key): Single<AerospikeResult<Record?>> {
         return Single.create {
             client.getHeader(policy, object : RecordListener {
                 override fun onSuccess(key: Key, record: Record?) {
-                    it.onSuccess(key to record)
+                    it.onSuccess(AerospikeResult(key,record))
                 }
 
                 override fun onFailure(exception: AerospikeException?) {
@@ -272,11 +274,11 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
         }, backPressure)
     }
 
-    fun rxAsyncGet(policy: BatchPolicy?, keys: Array<Key>): Single<Pair<Array<Key>, Array<Record?>>> {
+    fun rxAsyncGet(policy: BatchPolicy?, keys: Array<Key>): Single<AerospikeArrayResult<Array<Record?>>> {
         return Single.create {
             client.get(policy, object : RecordArrayListener {
                 override fun onSuccess(keyArray: Array<Key>, records: Array<Record?>) {
-                    it.onSuccess(keyArray to records)
+                    it.onSuccess(AerospikeArrayResult(keyArray, records))
                 }
 
                 override fun onFailure(exception: AerospikeException?) {
@@ -287,11 +289,11 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
     }
 
     @JvmOverloads
-    fun rxAsyncGetSequence(policy: BatchPolicy?, keys: Array<Key>, backPressure: BackpressureStrategy = MISSING): Flowable<Pair<Key, Record?>> {
+    fun rxAsyncGetSequence(policy: BatchPolicy?, keys: Array<Key>, backPressure: BackpressureStrategy = MISSING): Flowable<AerospikeResult<Record?>> {
         return Flowable.create({
             client.get(policy, object : RecordSequenceListener {
                 override fun onRecord(key: Key, record: Record?) {
-                    it.onNext(key to record)
+                    it.onNext(AerospikeResult(key, record))
                 }
 
                 override fun onSuccess() {
@@ -305,11 +307,11 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
         }, backPressure)
     }
 
-    fun rxAsyncGet(policy: BatchPolicy?, keys: Array<Key>, vararg binNames: String): Single<Pair<Array<Key>, Array<Record?>>> {
+    fun rxAsyncGet(policy: BatchPolicy?, keys: Array<Key>, vararg binNames: String): Single<AerospikeArrayResult<Array<Record?>>> {
         return Single.create {
             client.get(policy, object : RecordArrayListener {
                 override fun onSuccess(keyArray: Array<Key>, records: Array<Record?>) {
-                    it.onSuccess(keyArray to records)
+                    it.onSuccess(AerospikeArrayResult(keyArray, records))
                 }
 
                 override fun onFailure(exception: AerospikeException?) {
@@ -320,11 +322,11 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
     }
 
     @JvmOverloads
-    fun rxAsyncGetSequence(policy: BatchPolicy?, keys: Array<Key>, vararg binNames: String, backPressure: BackpressureStrategy = MISSING): Flowable<Pair<Key, Record?>> {
+    fun rxAsyncGetSequence(policy: BatchPolicy?, keys: Array<Key>, vararg binNames: String, backPressure: BackpressureStrategy = MISSING): Flowable<AerospikeResult<Record?>> {
         return Flowable.create({
             client.get(policy, object : RecordSequenceListener {
                 override fun onRecord(key: Key, record: Record?) {
-                    it.onNext(key to record)
+                    it.onNext(AerospikeResult(key, record))
                 }
 
                 override fun onSuccess() {
@@ -338,11 +340,11 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
         }, backPressure)
     }
 
-    fun rxAsyncGetHeader(policy: BatchPolicy?, keys: Array<Key>): Single<Pair<Array<Key>, Array<Record?>>> {
+    fun rxAsyncGetHeader(policy: BatchPolicy?, keys: Array<Key>): Single<AerospikeArrayResult<Array<Record?>>> {
         return Single.create {
             client.getHeader(policy, object : RecordArrayListener {
                 override fun onSuccess(keyArray: Array<Key>, records: Array<Record?>) {
-                    it.onSuccess(keyArray to records)
+                    it.onSuccess(AerospikeArrayResult(keyArray, records))
                 }
 
                 override fun onFailure(exception: AerospikeException?) {
@@ -353,11 +355,11 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
     }
 
     @JvmOverloads
-    fun rxAsyncGetHeaderSequence(policy: BatchPolicy?, keys: Array<Key>, backPressure: BackpressureStrategy = MISSING): Flowable<Pair<Key, Record?>> {
+    fun rxAsyncGetHeaderSequence(policy: BatchPolicy?, keys: Array<Key>, backPressure: BackpressureStrategy = MISSING): Flowable<AerospikeResult<Record?>> {
         return Flowable.create({
             client.getHeader(policy, object : RecordSequenceListener {
                 override fun onRecord(key: Key, record: Record?) {
-                    it.onNext(key to record)
+                    it.onNext(AerospikeResult(key, record))
                 }
 
                 override fun onSuccess() {
@@ -372,11 +374,11 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
     }
 
 
-    fun rxAsyncOperate(policy: WritePolicy?, key: Key, vararg operations: Operation): Single<Pair<Key, Record?>> {
+    fun rxAsyncOperate(policy: WritePolicy?, key: Key, vararg operations: Operation): Single<AerospikeResult<Record?>> {
         return Single.create {
             client.operate(policy, object : RecordListener {
                 override fun onSuccess(key: Key, record: Record?) {
-                    it.onSuccess(key to record)
+                    it.onSuccess(AerospikeResult(key, record))
                 }
 
                 override fun onFailure(exception: AerospikeException?) {
@@ -387,11 +389,11 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
     }
 
     @JvmOverloads
-    fun rxAsyncScanAll(policy: ScanPolicy?, namespace: String, setName: String, vararg binNames: String, backPressure: BackpressureStrategy = MISSING): Flowable<Pair<Key, Record?>> {
+    fun rxAsyncScanAll(policy: ScanPolicy?, namespace: String, setName: String, vararg binNames: String, backPressure: BackpressureStrategy = MISSING): Flowable<AerospikeResult<Record?>> {
         return Flowable.create({
             client.scanAll(policy, object : RecordSequenceListener {
                 override fun onRecord(key: Key, record: Record?) {
-                    it.onNext(key to record)
+                    it.onNext(AerospikeResult(key, record))
                 }
 
                 override fun onSuccess() {
@@ -405,11 +407,11 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
         }, backPressure)
     }
 
-    fun rxAsyncExecute(policy: WritePolicy?, key: Key, packageName: String, functionName: String, vararg functionArgs: Value): Single<Pair<Key, Any?>> {
+    fun rxAsyncExecute(policy: WritePolicy?, key: Key, packageName: String, functionName: String, vararg functionArgs: Value): Single<AerospikeResult<Any?>> {
         return Single.create {
             client.execute(policy, object : ExecuteListener {
                 override fun onSuccess(key: Key, obj: Any?) {
-                    it.onSuccess(key to obj)
+                    it.onSuccess(AerospikeResult(key, obj))
                 }
 
                 override fun onFailure(exception: AerospikeException?) {
@@ -420,11 +422,11 @@ class AerospikeRxClient(val client: AsyncClient) : IAsyncClient by client {
     }
 
     @JvmOverloads
-    fun rxAsyncQuery(policy: QueryPolicy?, statement: Statement, backPressure: BackpressureStrategy = MISSING): Flowable<Pair<Key, Record?>> {
+    fun rxAsyncQuery(policy: QueryPolicy?, statement: Statement, backPressure: BackpressureStrategy = MISSING): Flowable<AerospikeResult<Record?>> {
         return Flowable.create({
             client.query(policy, object : RecordSequenceListener {
                 override fun onRecord(key: Key, record: Record?) {
-                    it.onNext(key to record)
+                    it.onNext(AerospikeResult(key, record))
                 }
 
                 override fun onSuccess() {

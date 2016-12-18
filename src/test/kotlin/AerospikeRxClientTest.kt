@@ -1,3 +1,18 @@
+/*
+ * Copyright 2016 Jose Ignacio Acin Pozo. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 import com.aerospike.client.AerospikeException
 import com.aerospike.client.BatchRead
@@ -30,6 +45,8 @@ import com.aerospike.client.task.ExecuteTask
 import com.aerospike.client.task.IndexTask
 import com.aerospike.client.task.RegisterTask
 import com.github.ganet.rx.aerospike.AerospikeRxClient
+import com.github.ganet.rx.aerospike.data.AerospikeArrayResult
+import com.github.ganet.rx.aerospike.data.AerospikeResult
 import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentCaptor
@@ -176,7 +193,7 @@ class AerospikeRxClientTest {
         val singleDelete = rxClient.rxAsyncDelete(policy, key).test()
         verify(mockClient).delete(eq(policy), deleteListenerCaptor.capture(), eq(key))
         deleteListenerCaptor.value.onSuccess(key, true)
-        singleDelete.assertResult(key to true)
+        singleDelete.assertResult(AerospikeResult(key, true))
     }
 
     @Test
@@ -208,7 +225,7 @@ class AerospikeRxClientTest {
         val singleExists = rxClient.rxAsyncExists(policy, key).test()
         verify(mockClient).exists(eq(policy), existsListenerCaptor.capture(), eq(key))
         existsListenerCaptor.value.onSuccess(key, true)
-        singleExists.assertResult(key to true)
+        singleExists.assertResult(AerospikeResult(key, true))
     }
 
     @Test
@@ -224,7 +241,7 @@ class AerospikeRxClientTest {
         val singleExists = rxClient.rxAsyncExists(batchPolicy, keyArray).test()
         verify(mockClient).exists(eq(batchPolicy), existsArrayListenerCaptor.capture(), eq(keyArray))
         existsArrayListenerCaptor.value.onSuccess(keyArray, booleanArray)
-        singleExists.assertResult(keyArray to booleanArray)
+        singleExists.assertResult(AerospikeArrayResult(keyArray, booleanArray))
     }
 
     @Test
@@ -243,7 +260,7 @@ class AerospikeRxClientTest {
         existsSequenceListenerCaptor.value.onExists(key, false)
         existsSequenceListenerCaptor.value.onExists(key, true)
         existsSequenceListenerCaptor.value.onSuccess()
-        flowableExists.assertResult(key to true, key to false, key to true)
+        flowableExists.assertResult(AerospikeResult(key, true), AerospikeResult(key, false), AerospikeResult(key, true))
     }
 
     @Test
@@ -254,7 +271,7 @@ class AerospikeRxClientTest {
         existsSequenceListenerCaptor.value.onExists(key, false)
         existsSequenceListenerCaptor.value.onExists(key, true)
         existsSequenceListenerCaptor.value.onFailure(exception)
-        flowableExists.assertValues(key to true, key to false, key to true)
+        flowableExists.assertValues(AerospikeResult(key, true), AerospikeResult(key, false), AerospikeResult(key, true))
         flowableExists.assertError(exception)
     }
 
@@ -263,7 +280,7 @@ class AerospikeRxClientTest {
         val singleGet = rxClient.rxAsyncGet(policy, key).test()
         verify(mockClient).get(eq(policy), recordListener.capture(), eq(key))
         recordListener.value.onSuccess(key, record)
-        singleGet.assertResult(key to record)
+        singleGet.assertResult(AerospikeResult(key, record))
     }
 
     @Test
@@ -279,7 +296,7 @@ class AerospikeRxClientTest {
         val singleGetBins = rxClient.rxAsyncGet(policy, key, binName).test()
         verify(mockClient).get(eq(policy), recordListener.capture(), eq(key), eq(binName))
         recordListener.value.onSuccess(key, record)
-        singleGetBins.assertResult(key to record)
+        singleGetBins.assertResult(AerospikeResult(key, record))
     }
 
     @Test
@@ -295,7 +312,7 @@ class AerospikeRxClientTest {
         val singleGetHeader = rxClient.rxAsyncGetHeader(policy, key).test()
         verify(mockClient).getHeader(eq(policy), recordListener.capture(), eq(key))
         recordListener.value.onSuccess(key, record)
-        singleGetHeader.assertResult(key to record)
+        singleGetHeader.assertResult(AerospikeResult(key, record))
     }
 
     @Test
@@ -350,7 +367,7 @@ class AerospikeRxClientTest {
         val singleGetBatchArrayKeyRead = rxClient.rxAsyncGet(batchPolicy, keyArray).test()
         verify(mockClient).get(eq(batchPolicy), recordArrayListener.capture(), eq(keyArray))
         recordArrayListener.value.onSuccess(keyArray, recordArray)
-        singleGetBatchArrayKeyRead.assertResult(keyArray to recordArray)
+        singleGetBatchArrayKeyRead.assertResult(AerospikeArrayResult(keyArray, recordArray))
     }
 
     @Test
@@ -369,7 +386,7 @@ class AerospikeRxClientTest {
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onSuccess()
-        flowableGetSequenceArrayKey.assertResult(key to record, key to record, key to record)
+        flowableGetSequenceArrayKey.assertResult(AerospikeResult(key, record), AerospikeResult(key, record), AerospikeResult(key, record))
     }
 
     @Test
@@ -380,7 +397,7 @@ class AerospikeRxClientTest {
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onFailure(exception)
-        flowableGetSequenceArrayKey.assertValues(key to record, key to record, key to record)
+        flowableGetSequenceArrayKey.assertValues(AerospikeResult(key, record), AerospikeResult(key, record),AerospikeResult(key, record))
         flowableGetSequenceArrayKey.assertError(exception)
     }
 
@@ -389,7 +406,7 @@ class AerospikeRxClientTest {
         val singleGetArrayBin = rxClient.rxAsyncGet(batchPolicy, keyArray, binName).test()
         verify(mockClient).get(eq(batchPolicy), recordArrayListener.capture(), eq(keyArray), eq(binName))
         recordArrayListener.value.onSuccess(keyArray, recordArray)
-        singleGetArrayBin.assertResult(keyArray to recordArray)
+        singleGetArrayBin.assertResult(AerospikeArrayResult(keyArray, recordArray))
     }
 
     @Test
@@ -408,7 +425,7 @@ class AerospikeRxClientTest {
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onSuccess()
-        flowableGetSequenceArrayKeyBin.assertResult(key to record, key to record, key to record)
+        flowableGetSequenceArrayKeyBin.assertResult(AerospikeResult(key, record), AerospikeResult(key, record),AerospikeResult(key, record))
     }
 
     @Test
@@ -419,7 +436,7 @@ class AerospikeRxClientTest {
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onFailure(exception)
-        flowableGetSequenceArrayKeyBin.assertValues(key to record, key to record, key to record)
+        flowableGetSequenceArrayKeyBin.assertValues(AerospikeResult(key, record), AerospikeResult(key, record),AerospikeResult(key, record))
         flowableGetSequenceArrayKeyBin.assertError(exception)
     }
 
@@ -428,7 +445,7 @@ class AerospikeRxClientTest {
         val singleGetHeaderArray = rxClient.rxAsyncGetHeader(batchPolicy, keyArray).test()
         verify(mockClient).getHeader(eq(batchPolicy), recordArrayListener.capture(), eq(keyArray))
         recordArrayListener.value.onSuccess(keyArray, recordArray)
-        singleGetHeaderArray.assertResult(keyArray to recordArray)
+        singleGetHeaderArray.assertResult(AerospikeArrayResult(keyArray, recordArray))
     }
 
     @Test
@@ -447,7 +464,7 @@ class AerospikeRxClientTest {
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onSuccess()
-        flowableGetHeaderSequenceArrayKey.assertResult(key to record, key to record, key to record)
+        flowableGetHeaderSequenceArrayKey.assertResult(AerospikeResult(key, record), AerospikeResult(key, record),AerospikeResult(key, record))
     }
 
     @Test
@@ -458,7 +475,7 @@ class AerospikeRxClientTest {
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onFailure(exception)
-        flowableGetHeaderSequenceArrayKey.assertValues(key to record, key to record, key to record)
+        flowableGetHeaderSequenceArrayKey.assertValues(AerospikeResult(key, record), AerospikeResult(key, record),AerospikeResult(key, record))
         flowableGetHeaderSequenceArrayKey.assertError(exception)
     }
 
@@ -467,7 +484,7 @@ class AerospikeRxClientTest {
         val singleOperate = rxClient.rxAsyncOperate(policy, key, operations[0]).test()
         verify(mockClient).operate(eq(policy), recordListener.capture(), eq(key), eq(operations[0]))
         recordListener.value.onSuccess(key, record)
-        singleOperate.assertResult(key to record)
+        singleOperate.assertResult(AerospikeResult(key, record))
     }
 
     @Test
@@ -486,7 +503,7 @@ class AerospikeRxClientTest {
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onSuccess()
-        flowableScanAll.assertResult(key to record, key to record, key to record)
+        flowableScanAll.assertResult(AerospikeResult(key, record), AerospikeResult(key, record),AerospikeResult(key, record))
     }
 
     @Test
@@ -497,7 +514,7 @@ class AerospikeRxClientTest {
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onFailure(exception)
-        flowableScanAll.assertValues(key to record, key to record, key to record)
+        flowableScanAll.assertValues(AerospikeResult(key, record), AerospikeResult(key, record),AerospikeResult(key, record))
         flowableScanAll.assertError(exception)
     }
 
@@ -506,7 +523,7 @@ class AerospikeRxClientTest {
         val singleExecute = rxClient.rxAsyncExecute(policy, key, packageName, functionName, value).test()
         verify(mockClient).execute(eq(policy), executeListenerCaptor.capture(), eq(key), eq(packageName), eq(functionName), eq(value))
         executeListenerCaptor.value.onSuccess(key, value)
-        singleExecute.assertResult(key to value)
+        singleExecute.assertResult(AerospikeResult(key, value))
     }
 
     @Test
@@ -525,7 +542,7 @@ class AerospikeRxClientTest {
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onSuccess()
-        flowableQuery.assertResult(key to record, key to record, key to record)
+        flowableQuery.assertResult(AerospikeResult(key, record), AerospikeResult(key, record),AerospikeResult(key, record))
     }
 
     @Test
@@ -536,7 +553,7 @@ class AerospikeRxClientTest {
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onRecord(key, record)
         recordSequenceListener.value.onFailure(exception)
-        flowableQuery.assertValues(key to record, key to record, key to record)
+        flowableQuery.assertValues(AerospikeResult(key, record), AerospikeResult(key, record),AerospikeResult(key, record))
         flowableQuery.assertError(exception)
     }
 
